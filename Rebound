@@ -1,13 +1,125 @@
 -- ==========================================================
--- SCRIPT REBOUND - PARTE 1: CORE, LUZ AZUL Y ATAQUE
+-- SCRIPT REBOUND - PARTE 1: CORE, ATAQUE Y CINEMÁTICA
 -- ==========================================================
 local Players = game:GetService("Players")
 local CollectionService = game:GetService("CollectionService")
+local SoundService = game:GetService("SoundService")
+local TweenService = game:GetService("TweenService")
 local localPlayer = Players.LocalPlayer
 
 local TEXTURA_ID = "rbxassetid://14168652314"
 local AUDIO_MUERTE = "rbxassetid://109582246349306"
 local TAMANO_ENTIDAD = Vector3.new(12, 12, 0.2)
+
+-- Listas para la cinemática
+local imagenes = {
+	"rbxassetid://114297442521143",
+	"rbxassetid://140307342234836",
+	"rbxassetid://109463796236234",
+	"rbxassetid://123272529113706",
+	"rbxassetid://75339482580799",
+	"rbxassetid://79195444312238",
+	"rbxassetid://99437466259541",
+	"rbxassetid://82846097797262",
+	"rbxassetid://135375948659142",
+	"rbxassetid://132424274886104",
+	"rbxassetid://135177894319680",
+	"rbxassetid://128474841804390",
+	"rbxassetid://95351989640094"
+}
+
+local dialogos = {
+	"Moriste De Nuevo..",
+	"Hmm..",
+	"Moriste Por Rebound",
+	"El Aparecerá Por Delante No Atras",
+	"Si No Encuentras Un Armario Valiste",
+	"Tienes Que Estar Atento",
+	"Ten Más Cuidado La Próxima Vez",
+	"Nos Vemos Pronto",
+	"Adiós"
+}
+
+local function iniciarCinematica()
+	task.wait(4)
+
+	local sonido = Instance.new("Sound")
+	sonido.SoundId = "rbxassetid://1837237884"
+	sonido.Parent = SoundService
+	sonido:Play()
+
+	local Guipantalla = Instance.new("ScreenGui")
+	Guipantalla.Name = "CinematicaMuerte"
+	Guipantalla.ResetOnSpawn = false
+	Guipantalla.IgnoreGuiInset = true
+	Guipantalla.DisplayOrder = 999
+	Guipantalla.Parent = localPlayer:WaitForChild("PlayerGui")
+
+	local fondo = Instance.new("Frame")
+	fondo.Size = UDim2.new(1, 0, 1, 0)
+	fondo.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+	fondo.BackgroundTransparency = 0
+	fondo.Parent = Guipantalla
+
+	local etiquetaImagen = Instance.new("ImageLabel")
+	etiquetaImagen.Size = UDim2.new(0.65, 0, 0.65, 0)
+	etiquetaImagen.Position = UDim2.new(0.5, 0, 0.45, 0)
+	etiquetaImagen.AnchorPoint = Vector2.new(0.5, 0.5)
+	etiquetaImagen.BackgroundTransparency = 1
+	etiquetaImagen.ScaleType = Enum.ScaleType.Fit
+	etiquetaImagen.ZIndex = 1
+	etiquetaImagen.Parent = fondo
+
+	local textoDialogo = Instance.new("TextLabel")
+	textoDialogo.Size = UDim2.new(0.9, 0, 0.15, 0)
+	textoDialogo.Position = UDim2.new(0.5, 0, 0.85, 0)
+	textoDialogo.AnchorPoint = Vector2.new(0.5, 0.5)
+	textoDialogo.BackgroundTransparency = 1
+	textoDialogo.TextColor3 = Color3.fromRGB(225, 180, 20)
+	textoDialogo.TextStrokeTransparency = 0
+	textoDialogo.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+	textoDialogo.TextScaled = true
+	textoDialogo.Font = Enum.Font.FredokaOne
+	textoDialogo.ZIndex = 10
+	textoDialogo.Text = ""
+	textoDialogo.Parent = fondo
+
+	local dialogoTerminado = false
+
+	task.spawn(function()
+		for _, texto in ipairs(dialogos) do
+			textoDialogo.Text = texto
+			task.wait(3)
+		end
+		
+		dialogoTerminado = true
+		textoDialogo.Text = ""
+		
+		TweenService:Create(sonido, TweenInfo.new(1.5), {Volume = 0}):Play()
+		etiquetaImagen.Visible = false
+		task.wait(1)
+
+		local transicion = TweenService:Create(fondo, TweenInfo.new(2), {BackgroundTransparency = 1})
+		transicion:Play()
+		transicion.Completed:Wait()
+
+		sonido:Destroy()
+		Guipantalla:Destroy()
+	end)
+
+	task.spawn(function()
+		while not dialogoTerminado do
+			for _, idImagen in ipairs(imagenes) do
+				if dialogoTerminado then break end
+				etiquetaImagen.Image = idImagen
+				
+				for repeticion = 1, 2 do
+					task.wait(0.05)
+				end
+			end
+		end
+	end)
+end
 
 local currentRooms = workspace:FindFirstChild("CurrentRooms")
 if not currentRooms then
@@ -33,10 +145,9 @@ entidad.CanCollide = false
 entidad.CFrame = posicionSpawn * CFrame.new(0, 3, 0)
 entidad.Parent = workspace
 
--- LUZ AZUL CIELO (ESTILO HIELO)
 local luzHielo = Instance.new("PointLight")
-luzHielo.Color = Color3.fromRGB(135, 206, 250) -- Azul cielo
-luzHielo.Range = 60 -- Ilumina toda la habitación
+luzHielo.Color = Color3.fromRGB(135, 206, 250)
+luzHielo.Range = 60
 luzHielo.Brightness = 8
 luzHielo.Parent = entidad
 
@@ -45,7 +156,7 @@ decalFrente.Texture = TEXTURA_ID; decalFrente.Face = Enum.NormalId.Front; decalF
 local decalAtras = Instance.new("Decal")
 decalAtras.Texture = TEXTURA_ID; decalAtras.Face = Enum.NormalId.Back; decalAtras.Parent = entidad
 
-print("[PARTE 1] Núcleo de Rebound cargado con nueva textura y luz de hielo.")
+print("[PARTE 1] Núcleo cargado con cinemática de muerte.")
 
 local anguloGlitchY = 0
 local offsetGlitchVector = Vector3.new(0, 0, 0)
@@ -119,7 +230,7 @@ local function escanearSeguridadArmario(personaje)
 	return false
 end
 
--- DETECCIÓN Y SONIDO DE MUERTE
+-- DETECCIÓN, EJECUCIÓN DE MUERTE Y CINEMÁTICA
 task.spawn(function()
 	while task.wait(0.03) do
 		if not entidad or not entidad.Parent then break end
@@ -128,20 +239,20 @@ task.spawn(function()
 			local hum = personaje:FindFirstChildOfClass("Humanoid")
 			if hum.Health <= 0 then continue end
 			if (entidad.Position - personaje.HumanoidRootPart.Position).Magnitude < 22 then
-				if escanearSeguridadArmario(personaje) then
-					-- El jugador está a salvo en el armario
-				else
+				if not escanearSeguridadArmario(personaje) then
 					localPlayer:SetAttribute("AsesinadoPorRebound", true)
 					
-					-- Reproducir sonido de muerte con alto volumen
 					local sonidoMuerte = Instance.new("Sound")
 					sonidoMuerte.SoundId = AUDIO_MUERTE
 					sonidoMuerte.Volume = 8
 					sonidoMuerte.Parent = workspace.CurrentCamera
 					sonidoMuerte:Play()
 					
-					task.wait(0.01)
 					hum.Health = 0
+					
+					-- Inicia la cinemática de diálogos e imágenes
+					iniciarCinematica()
+					break
 				end
 			end
 		end
@@ -242,7 +353,7 @@ task.spawn(function()
     if conexionTemblor then conexionTemblor:Disconnect() end
 end)
 -- ==========================================================
--- SCRIPT REBOUND - PARTE 3: APARICIÓN POR DELANTE Y OLEADAS POR PUERTA
+-- SCRIPT REBOUND - PARTE 3: APARICIÓN POR DELANTE Y OLEADAS
 -- ==========================================================
 local Players = game:GetService("Players")
 local localPlayer = Players.LocalPlayer
@@ -250,7 +361,6 @@ local localPlayer = Players.LocalPlayer
 local VELOCIDAD_ULTRA = 430 
 local PASO_TIEMPO = 0.010 
 
--- NUEVAS IDS DE AUDIO
 local AUDIO_ADVERTENCIA = "rbxassetid://14093035297"
 local AUDIO_MOVIMIENTO = "rbxassetid://18920812603"
 
@@ -278,7 +388,6 @@ local function romperLucesDeHabitaciones()
     end
 end
 
--- Detección de apertura de puertas
 local function obtenerUltimaSala()
     local numeroMaximo = -1
     local salaMasLejana = nil
@@ -309,25 +418,22 @@ task.spawn(function()
     for pasada = 1, 3 do
         if not entidad or not entidad.Parent then break end
 
-        -- Reproducir audio de advertencia antes de atacar
         local sonidoAdvertencia = Instance.new("Sound")
         sonidoAdvertencia.SoundId = AUDIO_ADVERTENCIA
-        sonidoAdvertencia.Volume = 8 -- Volumen alto
+        sonidoAdvertencia.Volume = 8
         sonidoAdvertencia.Parent = contenedorAudio
         sonidoAdvertencia:Play()
         
         task.wait(2.5)
         if sonidoAdvertencia then sonidoAdvertencia:Destroy() end
 
-        -- Audio de movimiento en bucle con volumen amplificado
         local soundMovimiento = Instance.new("Sound")
         soundMovimiento.SoundId = AUDIO_MOVIMIENTO
-        soundMovimiento.Volume = 10 -- Volumen máximo
+        soundMovimiento.Volume = 10
         soundMovimiento.Looped = true
         soundMovimiento.Parent = contenedorAudio
         soundMovimiento:Play()
 
-        -- Colocar a Rebound al frente (En la última puerta abierta)
         local ultimaSala, ultimoNumero = obtenerUltimaSala()
         if ultimaSala then
             local puertaAlFrente = ultimaSala:FindFirstChild("Door") or ultimaSala:FindFirstChild("DoorPlatform") or ultimaSala:FindFirstChild("RoomStart")
@@ -369,13 +475,11 @@ task.spawn(function()
             end
         end
 
-        -- Recorrido de habitaciones de Adelante hacia Atrás
         local salas = {}
         for _, obj in ipairs(currentRooms:GetChildren()) do
             if tonumber(obj.Name) then table.insert(salas, obj) end
         end
         
-        -- Orden descendente (De adelante hacia atrás)
         table.sort(salas, function(a, b) return tonumber(a.Name) > tonumber(b.Name) end)
         
         for _, sala in ipairs(salas) do
@@ -420,14 +524,12 @@ task.spawn(function()
 
         soundMovimiento:Destroy()
 
-        -- Ocultar entidad temporalmente mientras se abre la siguiente puerta
         entidad.Transparency = 1
         
-        -- Si aún no ha completado las 3 pasadas, espera a que se abra la próxima puerta
         if pasada < 3 then
             local _, salaMaximaActual = obtenerUltimaSala()
             esperarNuevaPuerta(salaMaximaActual)
-            entidad.Transparency = 1 -- Se mantiene listo para atacar de nuevo
+            entidad.Transparency = 1
         end
     end
 
